@@ -187,7 +187,8 @@ section h3 {
   margin-top: auto;
   padding-top: 10px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* Activity Tag */
@@ -663,4 +664,84 @@ footer {
 
 #logout-button:hover {
   background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Social Sharing */
+.share-section {
+  position: relative;
+  width: 100%;
+}
+
+.share-button {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.share-button:hover {
+  background-color: var(--background);
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+}
+
+.share-options {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.share-option {
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  transition: background-color 0.15s ease;
+}
+
+.share-option:last-child {
+  border-bottom: none;
+}
+
+.share-option:hover {
+  background-color: var(--background);
+}
+
+/* Highlight an activity card when opened via a shared link */
+.activity-card.highlighted {
+  animation: highlight-pulse 4s ease forwards;
+}
+
+@keyframes highlight-pulse {
+  0%, 20% {
+    box-shadow: 0 0 0 3px var(--secondary), 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
+  80%, 100% {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  }
 }
