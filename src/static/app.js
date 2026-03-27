@@ -304,6 +304,68 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  // School name constant used in share messages
+  const SCHOOL_NAME = "Mergington High School";
+
+  // Get a shareable URL for an activity using the URL hash
+  function getShareableUrl(activityName) {
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+    return `${baseUrl}#${encodeURIComponent(activityName)}`;
+  }
+
+  // Share an activity on a given platform
+  function shareActivity(name, details, platform) {
+    const url = getShareableUrl(name);
+    const schedule = formatSchedule(details);
+    const text = `Check out "${name}" at ${SCHOOL_NAME}! ${details.description} Schedule: ${schedule}`;
+
+    if (platform === "copy") {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          showMessage("Link copied to clipboard!", "success");
+        }).catch(() => {
+          showMessage("Could not copy link. Please copy the URL from your browser's address bar.", "error");
+        });
+      } else {
+        // Fallback for browsers that do not support the Clipboard API
+        try {
+          const tempInput = document.createElement("input");
+          tempInput.value = url;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          document.execCommand("copy");
+          document.body.removeChild(tempInput);
+          showMessage("Link copied to clipboard!", "success");
+        } catch {
+          showMessage("Could not copy link. Please copy the URL from your browser's address bar.", "error");
+        }
+      }
+    } else if (platform === "twitter") {
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, "_blank", "noopener,noreferrer");
+    } else if (platform === "whatsapp") {
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`;
+      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  // Scroll to and highlight an activity that was linked to via URL hash
+  function handleDeepLink() {
+    if (!window.location.hash) return;
+
+    const activityName = decodeURIComponent(window.location.hash.slice(1));
+    const cards = activitiesList.querySelectorAll(".activity-card");
+
+    cards.forEach((card) => {
+      const cardTitle = card.querySelector("h4");
+      if (cardTitle && cardTitle.textContent === activityName) {
+        card.classList.add("highlighted");
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => card.classList.remove("highlighted"), 4000);
+      }
+    });
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -470,12 +532,16 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(filteredActivities).forEach(([name, details]) => {
       renderActivityCard(name, details);
     });
+
+    // Scroll to a linked activity if the URL contains a hash
+    handleDeepLink();
   }
 
   // Function to render a single activity card
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
     activityCard.className = "activity-card";
+    activityCard.dataset.activityName = name;
 
     // Calculate spots and capacity
     const totalSpots = details.max_participants;
@@ -568,6 +634,14 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+        <div class="share-section">
+          <button class="share-button" aria-label="Share ${name}" aria-haspopup="true" aria-expanded="false">🔗 Share</button>
+          <div class="share-options hidden" role="menu">
+            <button class="share-option" data-platform="copy" role="menuitem" aria-label="Copy link to ${name}">📋 Copy Link</button>
+            <button class="share-option" data-platform="twitter" role="menuitem" aria-label="Share ${name} on Twitter / X">🐦 Twitter / X</button>
+            <button class="share-option" data-platform="whatsapp" role="menuitem" aria-label="Share ${name} on WhatsApp">💬 WhatsApp</button>
+          </div>
+        </div>
       </div>
     `;
 
@@ -587,8 +661,65 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Share button: toggle the share options dropdown
+    const shareButton = activityCard.querySelector(".share-button");
+    const shareOptionsPanel = activityCard.querySelector(".share-options");
+    shareButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Close any other open share menus first
+      document.querySelectorAll(".share-options:not(.hidden)").forEach((el) => {
+        if (el !== shareOptionsPanel) {
+          el.classList.add("hidden");
+          el.previousElementSibling.setAttribute("aria-expanded", "false");
+        }
+      });
+      const isOpen = !shareOptionsPanel.classList.contains("hidden");
+      shareOptionsPanel.classList.toggle("hidden");
+      shareButton.setAttribute("aria-expanded", String(!isOpen));
+      if (!isOpen) {
+        // Move focus to the first option when opening
+        shareOptionsPanel.querySelector(".share-option").focus();
+      }
+    });
+
+    // Keyboard navigation inside the share menu
+    shareOptionsPanel.addEventListener("keydown", (e) => {
+      const options = Array.from(shareOptionsPanel.querySelectorAll(".share-option"));
+      const focused = document.activeElement;
+      const index = options.indexOf(focused);
+      if (e.key === "Escape") {
+        shareOptionsPanel.classList.add("hidden");
+        shareButton.setAttribute("aria-expanded", "false");
+        shareButton.focus();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        options[(index + 1) % options.length].focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        options[(index - 1 + options.length) % options.length].focus();
+      }
+    });
+
+    // Share option buttons
+    activityCard.querySelectorAll(".share-option").forEach((option) => {
+      option.addEventListener("click", (e) => {
+        e.stopPropagation();
+        shareActivity(name, details, option.dataset.platform);
+        shareOptionsPanel.classList.add("hidden");
+        shareButton.setAttribute("aria-expanded", "false");
+      });
+    });
+
     activitiesList.appendChild(activityCard);
   }
+
+  // Close all share menus when clicking elsewhere on the page
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".share-options:not(.hidden)").forEach((el) => {
+      el.classList.add("hidden");
+      el.previousElementSibling.setAttribute("aria-expanded", "false");
+    });
+  });
 
   // Event listeners for search and filter
   searchInput.addEventListener("input", (event) => {
