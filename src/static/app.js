@@ -496,6 +496,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const activityType = getActivityType(name, details.description);
     const typeInfo = activityTypes[activityType];
 
+    // Apply category-specific color to the card
+    activityCard.style.backgroundColor = typeInfo.color;
+    activityCard.style.borderLeft = `4px solid ${typeInfo.textColor}`;
+
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
 
